@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat Tool - 选择聊天接口</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            padding: 40px;
+            max-width: 900px;
+            width: 100%;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .header h1 {
+            color: #333;
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            color: #666;
+            font-size: 1.1rem;
+        }
+
+        .interfaces-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 25px;
+            margin-bottom: 30px;
+        }
+
+        .interface-card {
+            border: 2px solid #e9ecef;
+            border-radius: 15px;
+            padding: 25px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: #f8f9fa;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .interface-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+        }
+
+        .interface-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: var(--card-color);
+        }
+
+        .interface-card.general::before { background: #667eea; }
+        .interface-card.programming::before { background: #28a745; }
+        .interface-card.research::before { background: #17a2b8; }
+        .interface-card.business::before { background: #fd7e14; }
+        .interface-card.creative::before { background: #e83e8c; }
+
+        .interface-icon {
+            font-size: 2.5rem;
+            margin-bottom: 15px;
+            display: block;
+        }
+
+        .interface-card h3 {
+            color: #333;
+            font-size: 1.4rem;
+            margin-bottom: 10px;
+        }
+
+        .interface-card p {
+            color: #666;
+            font-size: 1rem;
+            line-height: 1.5;
+            margin-bottom: 15px;
+        }
+
+        .interface-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 500;
+            margin-top: 10px;
+        }
+
+        .badge-normal {
+            background: #e3f2fd;
+            color: #1565c0;
+        }
+
+        .badge-search {
+            background: #fff3e0;
+            color: #ef6c00;
+        }
+
+        .footer-info {
+            text-align: center;
+            color: #666;
+            font-size: 0.9rem;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #e9ecef;
+        }
+
+        @media (max-width: 768px) {
+            .interfaces-grid {
+                grid-template-columns: 1fr;
+                gap: 20px;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .container {
+                padding: 30px 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🤖 AI 聊天接口</h1>
+            <p>选择适合您需求的专业聊天助手</p>
+        </div>
+
+        <div class="interfaces-grid">
+            {% for key, interface in interfaces.items() %}
+            <div class="interface-card {{ key }}" onclick="window.location.href='/{{ key }}'">
+                <div class="interface-icon">
+                    {% if key == 'general' %}💬
+                    {% elif key == 'programming' %}💻
+                    {% elif key == 'research' %}🔍
+                    {% elif key == 'business' %}📊
+                    {% elif key == 'creative' %}✍️
+                    {% endif %}
+                </div>
+                <h3>{{ interface.name }}</h3>
+                <p>{{ interface.description }}</p>
+                <span class="interface-badge {% if interface.mode == 'search' %}badge-search{% else %}badge-normal{% endif %}">
+                    {% if interface.mode == 'search' %}
+                        🔍 搜索增强
+                    {% else %}
+                        🧠 标准对话
+                    {% endif %}
+                </span>
+            </div>
+            {% endfor %}
+        </div>
+
+        <div class="footer-info">
+            <p>💡 每个接口都会自动创建独立的会话，支持对话历史保存和恢复</p>
+            <p>🔗 您可以直接访问对应的URL来快速进入特定助手界面</p>
+        </div>
+    </div>
+
+    <script>
+        // 添加键盘快捷键支持
+        document.addEventListener('keydown', function(e) {
+            const shortcuts = {
+                '1': '/general',
+                '2': '/programming', 
+                '3': '/research',
+                '4': '/business',
+                '5': '/creative'
+            };
+            
+            if (shortcuts[e.key]) {
+                window.location.href = shortcuts[e.key];
+            }
+        });
+
+        // 添加卡片点击效果
+        document.querySelectorAll('.interface-card').forEach(card => {
+            card.addEventListener('mousedown', function() {
+                this.style.transform = 'translateY(-2px) scale(0.98)';
+            });
+            
+            card.addEventListener('mouseup', function() {
+                this.style.transform = 'translateY(-5px) scale(1)';
+            });
+            
+            card.addEventListener('mouseleave', function() {
+                this.style.transform = 'translateY(0) scale(1)';
+            });
+        });
+    </script>
+</body>
+</html>

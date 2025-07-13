@@ -1,0 +1,22 @@
+# Chat Tool - 最小化核心依赖
+# 仅包含应用运行必需的直接依赖
+
+# Web Framework & Server
+fastapi>=0.116.0
+uvicorn>=0.35.0
+
+# OpenAI Integration  
+openai>=1.95.0
+
+# Environment & Configuration
+python-dotenv>=1.1.0
+
+# Data Validation
+pydantic>=2.11.0
+
+# Template Engine
+jinja2>=3.1.0
+
+# File Operations
+aiofiles>=24.1.0
+python-multipart>=0.0.20
