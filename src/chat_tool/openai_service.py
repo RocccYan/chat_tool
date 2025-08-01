@@ -4,7 +4,7 @@ from typing import List, Dict, Optional, Any
 from datetime import datetime
 from openai import OpenAI
 from .models import ChatSession, Message, ChatMode, SessionManager
-from .config_manager import SystemPromptManager
+from .config_manager import SystemPromptManager, WelcomeMessageManager, ImplicitPromptManager
 
 class OpenAIService:
     def __init__(self, api_key: str):
@@ -18,6 +18,8 @@ class OpenAIService:
         
         self.session_manager = SessionManager()
         self.prompt_manager = SystemPromptManager()
+        self.welcome_manager = WelcomeMessageManager()
+        self.implicit_prompt_manager = ImplicitPromptManager()
 
     async def create_chat_session(self, user_id: str, prompt_type: str = "default", 
                                 mode: ChatMode = ChatMode.NORMAL) -> ChatSession:
@@ -36,10 +38,34 @@ class OpenAIService:
             user_id=user_id,
             mode=mode,
             system_prompt=system_prompt,
+            prompt_type=prompt_type,
             thread_id=thread_id
         )
         
         return session
+
+    def _enhance_user_message(self, user_message: str, session: ChatSession) -> str:
+        """Enhance user message with implicit prompt based on session configuration"""
+        # 根据会话的prompt_type和模式确定隐式prompt的模式
+        session_mode = session.mode.value.lower()  # "normal" or "search"
+        
+        # 检查是否是nosystem类型
+        if hasattr(session, 'prompt_type') and session.prompt_type == "nosystem":
+            implicit_mode = "nosystem"
+        elif session_mode == "search":
+            implicit_mode = "search"
+        else:
+            implicit_mode = "normal"
+        
+        # 获取隐式prompt
+        implicit_prompt = self.implicit_prompt_manager.get_implicit_prompt(implicit_mode)
+        
+        # 如果有隐式prompt，则拼接到用户消息中
+        if implicit_prompt:
+            enhanced_message = f"{user_message}\n\n[隐式指导]: {implicit_prompt}"
+            return enhanced_message
+        
+        return user_message
 
     async def send_message_normal_mode(self, session_id: str, user_message: str) -> Dict[str, Any]:
         """Send message using thread-based conversation (normal mode)"""
@@ -48,7 +74,10 @@ class OpenAIService:
             if not session or session.mode != ChatMode.NORMAL:
                 raise ValueError("Invalid session or mode")
 
-            # Add user message to session
+            # Enhance user message with implicit prompt
+            enhanced_message = self._enhance_user_message(user_message, session)
+
+            # Add original user message to session (without implicit prompt)
             user_msg = Message(
                 role="user",
                 content=user_message,
@@ -64,11 +93,11 @@ class OpenAIService:
                 model="gpt-4o"
             )
 
-            # Add message to thread
+            # Add enhanced message to thread (with implicit prompt)
             self.client.beta.threads.messages.create(
                 thread_id=session.thread_id,
                 role="user",
-                content=user_message
+                content=enhanced_message
             )
 
             # Run the assistant
@@ -138,7 +167,10 @@ class OpenAIService:
             if not session or session.mode != ChatMode.SEARCH:
                 raise ValueError("Invalid session or mode")
 
-            # Add user message to session
+            # Enhance user message with implicit prompt
+            enhanced_message = self._enhance_user_message(user_message, session)
+
+            # Add original user message to session (without implicit prompt)
             user_msg = Message(
                 role="user",
                 content=user_message,
@@ -150,8 +182,8 @@ class OpenAIService:
             # Get conversation history for context - this is important for multi-turn conversation
             conversation_history = session.get_messages_for_api()
             
-            # Create a comprehensive input that includes conversation context
-            context_input = self._build_context_input(conversation_history, user_message)
+            # Create a comprehensive input that includes conversation context and enhanced message
+            context_input = self._build_context_input(conversation_history, enhanced_message)
 
             # Use the OpenAI responses API with web_search_preview
             response = self.client.responses.create(
@@ -248,3 +280,10 @@ class OpenAIService:
     def get_available_prompts(self) -> Dict[str, str]:
         """Get available system prompts"""
         return self.prompt_manager.list_available_prompts()
+
+    def get_welcome_message(self, mode: str = "normal") -> Dict[str, str]:
+        """Get welcome message for a specific mode"""
+        return {
+            'title': self.welcome_manager.get_welcome_title(mode),
+            'message': self.welcome_manager.get_welcome_message(mode)
+        }

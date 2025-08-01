@@ -32,6 +32,7 @@
             display: flex;
             align-items: center;
             gap: 15px;
+            flex: 1;
         }
 
         .interface-icon {
@@ -49,6 +50,8 @@
             display: flex;
             flex-direction: column;
             gap: 4px;
+            flex: 1;
+            text-align: center;
         }
 
         .interface-name {
@@ -60,25 +63,39 @@
         .session-id {
             background: #e9ecef;
             color: #495057;
-            padding: 4px 8px;
+            padding: 8px 16px;
             border-radius: 12px;
             font-family: monospace;
-            font-size: 0.8rem;
+            font-size: 1.2rem;
             font-weight: bold;
+            text-align: center;
+            letter-spacing: 1px;
         }
 
-        .session-mode {
-            padding: 4px 8px;
-            border-radius: 12px;
-            font-size: 0.7rem;
-            font-weight: 500;
-            {% if mode == 'search' %}
-            background: #fff3e0;
-            color: #ef6c00;
-            {% else %}
-            background: #e3f2fd;
-            color: #1565c0;
-            {% endif %}
+        .session-id-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            justify-content: center;
+        }
+
+        .copy-button {
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            padding: 6px 12px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            transition: all 0.3s ease;
+        }
+
+        .copy-button:hover {
+            background: #0056b3;
+        }
+
+        .copy-button:active {
+            transform: scale(0.95);
         }
 
         .controls {
@@ -393,36 +410,24 @@
                 {% endif %}
             </div>
             <div class="session-info">
-                <div class="interface-name">{{ interface_name }}</div>
-                <div style="display: flex; gap: 8px; align-items: center;">
-                    <div class="session-id">ID: {{ session.session_id[:8] }}</div>
-                    <div class="session-mode">
-                        {% if mode == 'search' %}
-                            🔍 搜索增强
-                        {% else %}
-                            🧠 标准对话
-                        {% endif %}
-                    </div>
+                <div class="interface-name">问答平台</div>
+                <div class="session-id-container">
+                    <div class="session-id" id="sessionId">ID: {{ session.session_id }}</div>
+                    <button class="copy-button" onclick="copySessionId()" title="复制会话ID">复制</button>
                 </div>
             </div>
         </div>
         <div class="controls">
-            <button class="btn btn-primary" onclick="window.location.reload()">新会话</button>
             <button class="btn btn-success" onclick="completeConversation()">完成对话</button>
-            <button class="btn btn-danger" onclick="clearHistory()">清空历史</button>
         </div>
     </div>
 
     <div class="chat-container">
         <div class="chat-messages" id="chatMessages">
             <div class="welcome-message">
-                <h3>欢迎使用 {{ interface_name }}！</h3>
+                <h3>{{ welcome_title }}</h3>
                 <p>
-                    {% if mode == 'search' %}
-                    我可以为您搜索最新信息并回答问题。请随时向我提问任何需要实时数据的问题。
-                    {% else %}
-                    我会根据训练数据为您提供专业的帮助和建议。请告诉我您需要什么帮助。
-                    {% endif %}
+                    {{ welcome_message }}
                 </p>
             </div>
             
@@ -602,53 +607,40 @@
         }
 
         async function completeConversation() {
-            if (confirm('确定要完成并保存当前对话吗？系统将为您生成对话文件。')) {
-                try {
-                    const response = await fetch(`/api/sessions/${sessionId}/export`, {
-                        method: 'POST'
-                    });
-                    
-                    if (response.ok) {
-                        const result = await response.json();
-                        
-                        // 显示会话ID和文件信息
-                        const message = `对话已完成并保存！\n\n` +
-                                      `会话ID: ${sessionId}\n` +
-                                      `文件名: ${result.filename}\n` +
-                                      `消息总数: ${result.total_messages}\n` +
-                                      `导出时间: ${result.exported_at}\n\n` +
-                                      `文件已保存到服务器exports目录，点击确定下载到本地。`;
-                        
-                        if (confirm(message)) {
-                            // 下载文件到本地
-                            const a = document.createElement('a');
-                            a.href = result.download_url;
-                            a.download = result.filename;
-                            document.body.appendChild(a);
-                            a.click();
-                            document.body.removeChild(a);
-                        }
-                    } else {
-                        const error = await response.json();
-                        alert('保存对话失败: ' + (error.detail || '未知错误'));
-                    }
-                } catch (error) {
-                    alert('保存对话失败，请重试: ' + error.message);
+            try {
+                const response = await fetch(`/api/sessions/${sessionId}/export`, {
+                    method: 'POST'
+                });
+                
+                if (response.ok) {
+                    // 只显示简单的完成提示
+                    alert('对话已完成！');
+                } else {
+                    const error = await response.json();
+                    alert('保存对话失败: ' + (error.detail || '未知错误'));
                 }
+            } catch (error) {
+                alert('保存对话失败，请重试: ' + error.message);
             }
         }
 
-        async function clearHistory() {
-            if (confirm('确定要清空聊天历史吗？此操作不可撤销。')) {
-                try {
-                    await fetch(`/api/sessions/${sessionId}`, {
-                        method: 'DELETE'
-                    });
-                    location.reload();
-                } catch (error) {
-                    alert('清空历史失败，请重试');
-                }
-            }
+        function copySessionId() {
+            const sessionIdText = '{{ session.session_id }}';
+            navigator.clipboard.writeText(sessionIdText).then(function() {
+                // 临时改变按钮文本来提供反馈
+                const button = document.querySelector('.copy-button');
+                const originalText = button.textContent;
+                button.textContent = '已复制!';
+                button.style.background = '#28a745';
+                
+                setTimeout(function() {
+                    button.textContent = originalText;
+                    button.style.background = '#007bff';
+                }, 2000);
+            }).catch(function(err) {
+                console.error('复制失败: ', err);
+                alert('复制失败，请手动复制: ' + sessionIdText);
+            });
         }
 
         // Scroll to bottom function

@@ -95,7 +95,7 @@ async def search_chat(request: Request):
 @app.get("/nosystem", response_class=HTMLResponse)
 async def nosystem_chat(request: Request):
     """普通对话且不带system prompt"""
-    return await create_interface_session(request, "nosystem", "normal", "自由对话")
+    return await create_interface_session(request, "nosystem", "nosystem", "自由对话")
 
 async def create_interface_session(request: Request, prompt_type: str, mode: str, interface_name: str):
     """为特定接口创建会话"""
@@ -109,7 +109,12 @@ async def create_interface_session(request: Request, prompt_type: str, mode: str
         # 自动创建会话
         import uuid
         user_id = str(uuid.uuid4())
-        chat_mode = ChatMode.SEARCH if mode == "search" else ChatMode.NORMAL
+        
+        # 确定聊天模式
+        if mode == "search":
+            chat_mode = ChatMode.SEARCH
+        else:
+            chat_mode = ChatMode.NORMAL
         
         session = await openai_service.create_chat_session(
             user_id=user_id,
@@ -117,12 +122,18 @@ async def create_interface_session(request: Request, prompt_type: str, mode: str
             mode=chat_mode
         )
         
+        # 获取欢迎消息 - 使用正确的模式名称
+        welcome_mode = mode if mode in ["normal", "search", "nosystem"] else "normal"
+        welcome_data = openai_service.get_welcome_message(welcome_mode)
+        
         return templates.TemplateResponse("chat_interface.html", {
             "request": request,
             "session": session,
             "interface_name": interface_name,
             "mode": mode,
-            "history": []
+            "history": [],
+            "welcome_title": welcome_data['title'],
+            "welcome_message": welcome_data['message']
         })
         
     except Exception as e:

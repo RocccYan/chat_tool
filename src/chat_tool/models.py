@@ -39,6 +39,7 @@ class ChatSession:
     user_id: str
     mode: ChatMode
     system_prompt: str
+    prompt_type: str = "default"  # Add prompt_type field
     thread_id: Optional[str] = None  # For normal mode
     messages: List[Message] = None
     created_at: datetime = None
@@ -83,6 +84,7 @@ class ChatSession:
             "user_id": self.user_id,
             "mode": self.mode.value,
             "system_prompt": self.system_prompt,
+            "prompt_type": self.prompt_type,
             "thread_id": self.thread_id,
             "messages": [msg.to_dict() for msg in self.messages],
             "created_at": self.created_at.isoformat(),
@@ -97,6 +99,7 @@ class ChatSession:
             user_id=data["user_id"],
             mode=ChatMode(data["mode"]),
             system_prompt=data["system_prompt"],
+            prompt_type=data.get("prompt_type", "default"),
             thread_id=data.get("thread_id"),
             messages=messages,
             created_at=datetime.fromisoformat(data["created_at"]),
@@ -136,13 +139,15 @@ class SessionManager:
             json.dump(session.to_dict(), f, indent=2, ensure_ascii=False)
 
     def create_session(self, session_id: str, user_id: str, mode: ChatMode, 
-                      system_prompt: str, thread_id: Optional[str] = None) -> ChatSession:
+                      system_prompt: str, prompt_type: str = "default", 
+                      thread_id: Optional[str] = None) -> ChatSession:
         """Create a new chat session"""
         session = ChatSession(
             session_id=session_id,
             user_id=user_id,
             mode=mode,
             system_prompt=system_prompt,
+            prompt_type=prompt_type,
             thread_id=thread_id
         )
         self._sessions[session_id] = session
